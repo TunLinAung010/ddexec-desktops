@@ -1,0 +1,54 @@
+dbus:
+  image: dbus-debian
+  stop_timeout: 1s
+  dockerfile: |
+    FROM debian
+
+    RUN apt-get update && apt-get install -y dbus
+    RUN useradd -ms /bin/bash user
+    RUN mkdir -p /var/run/dbus \
+        && mkdir -p /run/user/1000 \
+        && chown 1000:1000 /run/user/1000
+
+    CMD rm -f /var/run/dbus/pid \
+        && dbus-daemon --system --fork \
+        && runuser -u user -- \
+          dbus-daemon --session --nofork --address=unix:path=/run/user/1000/bus
+  x-startup:
+    keep_user: true
+    share_dbus: true
+    daemon: true
+
+i3:
+  image: i3-debian
+  privileged: true
+  depends_on:
+    - dbus
+  dockerfile: |
+    FROM debian
+
+    RUN apt-get update
+    RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        xserver-xorg xserver-xorg-input-libinput xserver-xorg-input-all \
+        i3-wm dmenu stterm x11-xserver-utils xinit
+
+    RUN mkdir -p /etc/X11/xinit/xinitrc.d
+    RUN echo 'i3' > /etc/X11/xinit/xinitrc.d/i3
+    RUN chmod +x /etc/X11/xinit/xinitrc.d/i3
+
+    RUN mkdir -p /etc/X11/xorg.conf.d
+    RUN sed -i -E 's/^(\s*)(MatchIsTouchpad "on")/\1\2\n\1Option "Tapping" "on"/' /usr/share/X11/xorg.conf.d/40-libinput.conf 
+    RUN ln -s /usr/share/X11/xorg.conf.d/40-libinput.conf /etc/X11/xorg.conf.d/40-libinput.conf
+
+    RUN sed -i 's/allowed_users=.*/allowed_users=anybody/' /etc/X11/Xwrapper.config
+    RUN echo 'needs_root_rights=yes' >> /etc/X11/Xwrapper.config
+    RUN cat /etc/X11/Xwrapper.config
+
+    ENTRYPOINT [ "/usr/bin/startx", "--", "-nolisten", "tcp" ]
+    CMD [ "vt1" ]
+  x-startup:
+    share_x11: true
+    share_dbus: true
+    share_docker: true
+    share_home: true
+    share_tools: true
