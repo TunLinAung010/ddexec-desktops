@@ -47,6 +47,7 @@ i3:
     ENTRYPOINT [ "/usr/bin/startx", "--", "-nolisten", "tcp" ]
     CMD [ "vt1" ]
   x-startup:
+    desktop_mode: true
     share_x11: true
     share_dbus: true
     share_docker: true
