@@ -11,4 +11,4 @@ command -v ddexec >/dev/null || {
     exit 1
 }
 
-exec ddexec --desktop "$1/ddexec.yml"
+exec ddexec "$1/ddexec.yml"
