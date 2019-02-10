@@ -15,6 +15,7 @@ dbus:
         && runuser -u user -- \
           dbus-daemon --session --nofork --address=unix:path=/run/user/1000/bus
   x-startup:
+    desktop_mode: true
     keep_user: true
     share_dbus: true
     daemon: true
