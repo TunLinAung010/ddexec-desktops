@@ -23,6 +23,8 @@ dbus:
 i3:
   image: i3-debian
   privileged: true
+  stop_signal: SIGTERM
+  stop_timeout: 3s
   depends_on:
     - dbus
   dockerfile: |
@@ -48,9 +50,5 @@ i3:
     ENTRYPOINT [ "/usr/bin/startx", "--", "-nolisten", "tcp" ]
     CMD [ "vt1" ]
   x-startup:
+    use_defaults: true
     desktop_mode: true
-    share_x11: true
-    share_dbus: true
-    share_docker: true
-    share_home: true
-    share_tools: true
