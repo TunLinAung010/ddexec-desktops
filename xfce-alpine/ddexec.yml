@@ -1,0 +1,46 @@
+dbus:
+  image: dbus-debian
+  stop_timeout: 1s
+  dockerfile: |
+    FROM debian
+
+    RUN apt-get update && apt-get install -y dbus
+    RUN useradd -ms /bin/bash user
+    RUN mkdir -p /var/run/dbus \
+        && mkdir -p /run/user/1000 \
+        && chown 1000:1000 /run/user/1000
+
+    CMD rm -f /var/run/dbus/pid \
+        && dbus-daemon --system --fork \
+        && runuser -u user -- \
+          dbus-daemon --session --nofork --address=unix:path=/run/user/1000/bus
+  x-startup:
+    desktop_mode: true
+    keep_user: true
+    share_dbus: true
+    daemon: true
+
+xfce:
+  image: xfce4-alpine
+  privileged: true
+  stop_signal: SIGTERM
+  stop_timeout: 3s
+  depends_on:
+    - dbus
+  dockerfile: |
+    FROM alpine
+
+    RUN apk add xfce4 \
+      xinit xorg-server eudev \
+      xf86-input-libinput xf86-input-mouse xf86-input-keyboard \
+      xf86-video-intel xf86-video-modesetting
+    RUN Xorg -configure
+
+    RUN mkdir -p /etc/X11/xorg.conf.d
+    RUN sed -i -E 's/^(\s*)(MatchIsTouchpad "on")/\1\2\n\1Option "Tapping" "on"/' /usr/share/X11/xorg.conf.d/40-libinput.conf 
+    RUN ln -s /usr/share/X11/xorg.conf.d/40-libinput.conf /etc/X11/xorg.conf.d/40-libinput.conf
+
+    ENTRYPOINT [ "/usr/bin/startxfce4" ]
+  x-startup:
+    use_defaults: true
+    desktop_mode: true
